@@ -9,6 +9,7 @@ import '../../widgets/app_max_width.dart';
 import '../../widgets/confirm_dialog.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/priority_badge.dart';
+import '../../widgets/status_badge.dart';
 
 class TaskDetailsView extends GetView<TaskController> {
   const TaskDetailsView({super.key});
@@ -48,92 +49,90 @@ class TaskDetailsView extends GetView<TaskController> {
             return const EmptyState(
               title: AppStrings.notFound,
               message: 'Go back to the home screen and select another task.',
+              icon: Icons.search_off_rounded,
             );
           }
 
           final theme = Theme.of(context);
+          final isOverdue =
+              !task.isCompleted &&
+              task.dueDate.isBefore(
+                DateTime(
+                  DateTime.now().year,
+                  DateTime.now().month,
+                  DateTime.now().day,
+                ),
+              );
 
           return AppMaxWidth(
             child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            children: [
-              Text(
-                task.title,
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  decoration: task.isCompleted
-                      ? TextDecoration.lineThrough
-                      : null,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  PriorityBadge(priority: task.priority),
-                  Chip(
-                    avatar: Icon(
-                      task.isCompleted
-                          ? Icons.check_circle_outline
-                          : Icons.schedule_outlined,
-                      size: 18,
-                    ),
-                    label: Text(
-                      task.isCompleted
-                          ? AppStrings.completed
-                          : AppStrings.pending,
-                    ),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              children: [
+                Text(
+                  task.title,
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                    decoration: task.isCompleted
+                        ? TextDecoration.lineThrough
+                        : null,
+                    color: task.isCompleted
+                        ? theme.colorScheme.onSurfaceVariant
+                        : theme.colorScheme.onSurface,
                   ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              _DetailTile(
-                icon: Icons.notes_outlined,
-                label: AppStrings.descriptionLabel,
-                value: task.description.isEmpty
-                    ? 'No description added'
-                    : task.description,
-              ),
-              const SizedBox(height: 12),
-              _DetailTile(
-                icon: Icons.event_outlined,
-                label: AppStrings.dueDateLabel,
-                value: DateFormatter.display(task.dueDate),
-              ),
-              const SizedBox(height: 12),
-              _DetailTile(
-                icon: Icons.calendar_today_outlined,
-                label: 'Created',
-                value: DateFormatter.display(task.createdAt),
-              ),
-              const SizedBox(height: 28),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Mark as completed'),
-                subtitle: Text(
-                  task.isCompleted
-                      ? 'This task is marked complete'
-                      : 'This task is still pending',
                 ),
-                value: task.isCompleted,
-                onChanged: (_) => controller.toggleTaskStatus(task.id),
-              ),
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: () =>
-                    Get.toNamed(AppRoutes.addTask, arguments: task),
-                icon: const Icon(Icons.edit_outlined),
-                label: const Text(AppStrings.edit),
-              ),
-              const SizedBox(height: 8),
-              TextButton.icon(
-                onPressed: () => _delete(context, task.id),
-                icon: const Icon(Icons.delete_outline),
-                label: const Text(AppStrings.delete),
-              ),
-            ],
-          ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    PriorityBadge(priority: task.priority),
+                    StatusBadge(isCompleted: task.isCompleted),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                _InfoCard(
+                  icon: Icons.notes_rounded,
+                  label: AppStrings.descriptionLabel,
+                  value: task.description.isEmpty
+                      ? 'No description added'
+                      : task.description,
+                ),
+                const SizedBox(height: 12),
+                _InfoCard(
+                  icon: Icons.event_rounded,
+                  label: AppStrings.dueDateLabel,
+                  value: isOverdue
+                      ? 'Overdue · ${DateFormatter.display(task.dueDate)}'
+                      : DateFormatter.display(task.dueDate),
+                  valueColor: isOverdue ? theme.colorScheme.error : null,
+                ),
+                const SizedBox(height: 12),
+                _InfoCard(
+                  icon: Icons.calendar_today_rounded,
+                  label: 'Created',
+                  value: DateFormatter.display(task.createdAt),
+                ),
+                const SizedBox(height: 20),
+                _CompletionCard(
+                  isCompleted: task.isCompleted,
+                  onChanged: () => controller.toggleTaskStatus(task.id),
+                ),
+                const SizedBox(height: 20),
+                OutlinedButton.icon(
+                  onPressed: () =>
+                      Get.toNamed(AppRoutes.addTask, arguments: task),
+                  icon: const Icon(Icons.edit_outlined),
+                  label: const Text(AppStrings.edit),
+                ),
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: () => _delete(context, task.id),
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text(AppStrings.delete),
+                ),
+              ],
+            ),
           );
         }),
       ),
@@ -155,16 +154,72 @@ class TaskDetailsView extends GetView<TaskController> {
   }
 }
 
-class _DetailTile extends StatelessWidget {
-  const _DetailTile({
+class _CompletionCard extends StatelessWidget {
+  const _CompletionCard({
+    required this.isCompleted,
+    required this.onChanged,
+  });
+
+  final bool isCompleted;
+  final VoidCallback onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final background = isCompleted
+        ? (isDark ? const Color(0xFF163428) : const Color(0xFFECFDF5))
+        : theme.colorScheme.surface;
+    final border = isCompleted
+        ? const Color(0xFF86EFAC).withValues(alpha: 0.7)
+        : theme.colorScheme.outlineVariant.withValues(alpha: 0.7);
+
+    return Material(
+      color: background,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onChanged,
+        borderRadius: BorderRadius.circular(20),
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: border),
+          ),
+          child: SwitchListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+            title: Text(
+              isCompleted ? 'Task completed' : 'Mark as completed',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            subtitle: Text(
+              isCompleted
+                  ? 'Turn this off to move it back to pending'
+                  : 'This task is still pending',
+            ),
+            value: isCompleted,
+            onChanged: (_) => onChanged(),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoCard extends StatelessWidget {
+  const _InfoCard({
     required this.icon,
     required this.label,
     required this.value,
+    this.valueColor,
   });
 
   final IconData icon;
   final String label;
   final String value;
+  final Color? valueColor;
 
   @override
   Widget build(BuildContext context) {
@@ -176,7 +231,17 @@ class _DetailTile extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: theme.colorScheme.primary),
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primaryContainer.withValues(
+                  alpha: 0.55,
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: theme.colorScheme.primary, size: 20),
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -189,7 +254,14 @@ class _DetailTile extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(value, style: theme.textTheme.bodyLarge),
+                  Text(
+                    value,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: valueColor,
+                      height: 1.35,
+                    ),
+                  ),
                 ],
               ),
             ),

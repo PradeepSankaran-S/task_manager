@@ -15,6 +15,7 @@ Future<bool> showConfirmDialog({
       return AlertDialog(
         title: Text(title),
         content: Text(message),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -23,7 +24,9 @@ Future<bool> showConfirmDialog({
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
             style: FilledButton.styleFrom(
-              minimumSize: const Size(88, 40),
+              minimumSize: const Size(96, 44),
+              backgroundColor: Theme.of(dialogContext).colorScheme.error,
+              foregroundColor: Theme.of(dialogContext).colorScheme.onError,
             ),
             child: Text(confirmLabel),
           ),

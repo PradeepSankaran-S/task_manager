@@ -5,9 +5,10 @@ import '../../app/constants/app_constants.dart';
 import '../../app/constants/app_strings.dart';
 import '../../app/constants/date_formatter.dart';
 import '../../controllers/task_controller.dart';
-import '../../widgets/app_max_width.dart';
 import '../../data/models/task_model.dart';
 import '../../data/models/task_priority.dart';
+import '../../widgets/app_max_width.dart';
+import '../../widgets/priority_badge.dart';
 
 class AddTaskView extends StatefulWidget {
   const AddTaskView({super.key});
@@ -53,6 +54,8 @@ class _AddTaskViewState extends State<AddTaskView> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -64,89 +67,157 @@ class _AddTaskViewState extends State<AddTaskView> {
           key: _formKey,
           autovalidateMode: AutovalidateMode.onUserInteraction,
           child: AppMaxWidth(
-            child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            children: [
-              TextFormField(
-                controller: _titleController,
-                textCapitalization: TextCapitalization.sentences,
-                maxLength: AppConstants.titleMaxLength,
-                decoration: const InputDecoration(
-                  labelText: AppStrings.titleLabel,
-                  hintText: AppStrings.titleHint,
-                ),
-                validator: _validateTitle,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _descriptionController,
-                textCapitalization: TextCapitalization.sentences,
-                maxLines: 4,
-                maxLength: AppConstants.descriptionMaxLength,
-                decoration: const InputDecoration(
-                  labelText: AppStrings.descriptionLabel,
-                  hintText: AppStrings.descriptionHint,
-                  alignLabelWithHint: true,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                AppStrings.priorityLabel,
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
-              const SizedBox(height: 8),
-              SegmentedButton<TaskPriority>(
-                showSelectedIcon: false,
-                segments: [
-                  for (final priority in TaskPriority.values)
-                    ButtonSegment(
-                      value: priority,
-                      label: Text(priority.label),
-                    ),
-                ],
-                selected: {_priority},
-                onSelectionChanged: (values) {
-                  if (values.isNotEmpty) {
-                    setState(() => _priority = values.first);
-                  }
-                },
-              ),
-              const SizedBox(height: 20),
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(
-                    color: Theme.of(context).colorScheme.outlineVariant,
+            child: Column(
+              children: [
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                    children: [
+                      Text(
+                        _isEditing
+                            ? 'Update the details below'
+                            : 'Add the details below',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      TextFormField(
+                        controller: _titleController,
+                        textCapitalization: TextCapitalization.sentences,
+                        maxLength: AppConstants.titleMaxLength,
+                        decoration: const InputDecoration(
+                          labelText: AppStrings.titleLabel,
+                          hintText: AppStrings.titleHint,
+                          prefixIcon: Icon(Icons.title_rounded),
+                        ),
+                        validator: _validateTitle,
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _descriptionController,
+                        textCapitalization: TextCapitalization.sentences,
+                        maxLines: 4,
+                        maxLength: AppConstants.descriptionMaxLength,
+                        decoration: const InputDecoration(
+                          labelText: AppStrings.descriptionLabel,
+                          hintText: AppStrings.descriptionHint,
+                          alignLabelWithHint: true,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        AppStrings.priorityLabel,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          for (final priority in TaskPriority.values) ...[
+                            if (priority != TaskPriority.low)
+                              const SizedBox(width: 8),
+                            Expanded(
+                              child: _PriorityOption(
+                                priority: priority,
+                                selected: _priority == priority,
+                                onTap: () =>
+                                    setState(() => _priority = priority),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      Material(
+                        color: theme.colorScheme.surface,
+                        borderRadius: BorderRadius.circular(16),
+                        child: InkWell(
+                          onTap: _pickDueDate,
+                          borderRadius: BorderRadius.circular(16),
+                          child: Ink(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: theme.colorScheme.outlineVariant
+                                    .withValues(alpha: 0.7),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 44,
+                                  height: 44,
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.primaryContainer
+                                        .withValues(alpha: 0.6),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Icon(
+                                    Icons.event_rounded,
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        AppStrings.dueDateLabel,
+                                        style: theme.textTheme.labelLarge
+                                            ?.copyWith(
+                                          color: theme
+                                              .colorScheme.onSurfaceVariant,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        _dueDate == null
+                                            ? 'Tap to choose a date'
+                                            : DateFormatter.display(_dueDate!),
+                                        style: theme.textTheme.titleSmall
+                                            ?.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                          color: _dueDate == null
+                                              ? theme.colorScheme.error
+                                              : theme.colorScheme.onSurface,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const Icon(Icons.chevron_right_rounded),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                leading: const Icon(Icons.event_outlined),
-                title: const Text(AppStrings.dueDateLabel),
-                subtitle: Text(
-                  _dueDate == null
-                      ? AppStrings.dueDateRequired
-                      : DateFormatter.display(_dueDate!),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: FilledButton(
+                    onPressed: _isSaving ? null : _save,
+                    child: _isSaving
+                        ? const SizedBox(
+                            height: 22,
+                            width: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(
+                            _isEditing
+                                ? AppStrings.updateTask
+                                : AppStrings.saveTask,
+                          ),
+                  ),
                 ),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: _pickDueDate,
-              ),
-              const SizedBox(height: 28),
-              FilledButton(
-                onPressed: _isSaving ? null : _save,
-                child: _isSaving
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(
-                        _isEditing
-                            ? AppStrings.updateTask
-                            : AppStrings.saveTask,
-                      ),
-              ),
-            ],
-          ),
+              ],
+            ),
           ),
         ),
       ),
@@ -216,5 +287,56 @@ class _AddTaskViewState extends State<AddTaskView> {
     if (success) {
       Get.back();
     }
+  }
+}
+
+class _PriorityOption extends StatelessWidget {
+  const _PriorityOption({
+    required this.priority,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final TaskPriority priority;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = PriorityStyle.of(context, priority);
+
+    return Material(
+      color: selected ? colors.background : Theme.of(context).colorScheme.surface,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Ink(
+          height: 52,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: selected
+                  ? colors.accent
+                  : Theme.of(context).colorScheme.outlineVariant.withValues(
+                      alpha: 0.7,
+                    ),
+              width: selected ? 1.6 : 1,
+            ),
+          ),
+          child: Center(
+            child: Text(
+              priority.label,
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: selected
+                    ? colors.foreground
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

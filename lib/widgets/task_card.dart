@@ -4,6 +4,7 @@ import '../app/constants/app_strings.dart';
 import '../app/constants/date_formatter.dart';
 import '../data/models/task_model.dart';
 import 'priority_badge.dart';
+import 'status_badge.dart';
 
 class TaskCard extends StatelessWidget {
   const TaskCard({
@@ -24,91 +25,125 @@ class TaskCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final priority = PriorityStyle.of(context, task.priority);
     final isOverdue =
         !task.isCompleted && task.dueDate.isBefore(_startOfToday());
+    final completedTint = theme.brightness == Brightness.dark
+        ? const Color(0xFF12261D)
+        : const Color(0xFFF0FDF4);
 
-    return Card(
+    return Material(
+      color: task.isCompleted ? completedTint : theme.colorScheme.surface,
+      borderRadius: BorderRadius.circular(20),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(8, 12, 8, 12),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Checkbox(
-                value: task.isCompleted,
-                onChanged: (_) => onToggleStatus(),
-              ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      task.title,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        decoration: task.isCompleted
-                            ? TextDecoration.lineThrough
-                            : null,
-                        color: task.isCompleted
-                            ? theme.colorScheme.onSurfaceVariant
-                            : null,
-                      ),
+        borderRadius: BorderRadius.circular(20),
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: task.isCompleted
+                  ? const Color(0xFF86EFAC).withValues(alpha: 0.55)
+                  : theme.colorScheme.outlineVariant.withValues(alpha: 0.65),
+            ),
+          ),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  width: 6,
+                  decoration: BoxDecoration(
+                    color: task.isCompleted
+                        ? const Color(0xFF22C55E)
+                        : priority.accent,
+                    borderRadius: const BorderRadius.horizontal(
+                      left: Radius.circular(20),
                     ),
-                    if (task.description.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        task.description,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      crossAxisAlignment: WrapCrossAlignment.center,
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 14, 4, 14),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        PriorityBadge(priority: task.priority),
-                        _MetaChip(
-                          icon: Icons.event_outlined,
-                          label: DateFormatter.short(task.dueDate),
-                          color: isOverdue
-                              ? theme.colorScheme.error
-                              : theme.colorScheme.onSurfaceVariant,
+                        Checkbox(
+                          value: task.isCompleted,
+                          onChanged: (_) => onToggleStatus(),
                         ),
-                        _MetaChip(
-                          icon: task.isCompleted
-                              ? Icons.check_circle_outline
-                              : Icons.schedule_outlined,
-                          label: task.isCompleted
-                              ? AppStrings.completed
-                              : AppStrings.pending,
-                          color: theme.colorScheme.onSurfaceVariant,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                task.title,
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: -0.2,
+                                  decoration: task.isCompleted
+                                      ? TextDecoration.lineThrough
+                                      : null,
+                                  color: task.isCompleted
+                                      ? theme.colorScheme.onSurfaceVariant
+                                      : theme.colorScheme.onSurface,
+                                ),
+                              ),
+                              if (task.description.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  task.description,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                    height: 1.35,
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 12),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  PriorityBadge(priority: task.priority),
+                                  StatusBadge(isCompleted: task.isCompleted),
+                                  _DateChip(
+                                    label: isOverdue
+                                        ? 'Overdue · ${DateFormatter.relative(task.dueDate)}'
+                                        : DateFormatter.relative(task.dueDate),
+                                    color: isOverdue
+                                        ? theme.colorScheme.error
+                                        : theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        PopupMenuButton<String>(
+                          tooltip: 'More',
+                          onSelected: (value) {
+                            if (value == 'edit') onEdit();
+                            if (value == 'delete') onDelete();
+                          },
+                          itemBuilder: (context) => const [
+                            PopupMenuItem(
+                              value: 'edit',
+                              child: Text(AppStrings.edit),
+                            ),
+                            PopupMenuItem(
+                              value: 'delete',
+                              child: Text(AppStrings.delete),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-              PopupMenuButton<String>(
-                onSelected: (value) {
-                  if (value == 'edit') onEdit();
-                  if (value == 'delete') onDelete();
-                },
-                itemBuilder: (context) => const [
-                  PopupMenuItem(value: 'edit', child: Text(AppStrings.edit)),
-                  PopupMenuItem(
-                    value: 'delete',
-                    child: Text(AppStrings.delete),
                   ),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -121,29 +156,34 @@ class TaskCard extends StatelessWidget {
   }
 }
 
-class _MetaChip extends StatelessWidget {
-  const _MetaChip({
-    required this.icon,
-    required this.label,
-    required this.color,
-  });
+class _DateChip extends StatelessWidget {
+  const _DateChip({required this.label, required this.color});
 
-  final IconData icon;
   final String label;
   final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 16, color: color),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(color: color),
-        ),
-      ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.event_outlined, size: 14, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

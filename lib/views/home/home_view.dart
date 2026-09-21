@@ -17,12 +17,13 @@ class HomeView extends GetView<TaskController> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      appBar: AppBar(title: const Text(AppStrings.homeTitle)),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Get.toNamed(AppRoutes.addTask),
-        tooltip: AppStrings.addTask,
-        child: const Icon(Icons.add),
+        icon: const Icon(Icons.add_rounded),
+        label: const Text(AppStrings.addTask),
       ),
       body: SafeArea(
         child: Obx(() {
@@ -35,22 +36,54 @@ class HomeView extends GetView<TaskController> {
             return EmptyState(
               title: 'Unable to load tasks',
               message: controller.errorMessage.value,
+              icon: Icons.error_outline_rounded,
               actionLabel: AppStrings.retry,
+              actionIcon: Icons.refresh_rounded,
               onAction: controller.getTasks,
             );
           }
 
+          final pendingCount = controller.tasks
+              .where((task) => !task.isCompleted)
+              .length;
+          final completedCount = controller.tasks.length - pendingCount;
+
           return AppMaxWidth(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: TaskFilterBar(
-                      selected: controller.filter.value,
-                      onChanged: controller.filterTasks,
-                    ),
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        AppStrings.homeTitle,
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.8,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        controller.tasks.isEmpty
+                            ? 'Plan your day with a clear task list'
+                            : '$pendingCount pending · $completedCount completed',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  child: TaskFilterBar(
+                    selected: controller.filter.value,
+                    onChanged: controller.filterTasks,
+                    allCount: controller.tasks.length,
+                    pendingCount: pendingCount,
+                    completedCount: completedCount,
                   ),
                 ),
                 Expanded(child: _TaskList(controller: controller)),
@@ -79,7 +112,13 @@ class _TaskList extends StatelessWidget {
           controller.filter.value,
           controller.tasks.isEmpty,
         ),
+        icon: controller.tasks.isEmpty
+            ? Icons.task_alt_outlined
+            : controller.filter.value == TaskFilter.completed
+            ? Icons.verified_outlined
+            : Icons.inbox_outlined,
         actionLabel: controller.tasks.isEmpty ? AppStrings.addTask : null,
+        actionIcon: controller.tasks.isEmpty ? Icons.add_rounded : null,
         onAction: controller.tasks.isEmpty
             ? () => Get.toNamed(AppRoutes.addTask)
             : null,
@@ -87,17 +126,14 @@ class _TaskList extends StatelessWidget {
     }
 
     return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 88),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
       itemCount: items.length,
       separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final task = items[index];
         return TaskCard(
           task: task,
-          onTap: () => Get.toNamed(
-            AppRoutes.taskDetails,
-            arguments: task.id,
-          ),
+          onTap: () => Get.toNamed(AppRoutes.taskDetails, arguments: task.id),
           onToggleStatus: () => controller.toggleTaskStatus(task.id),
           onEdit: () => Get.toNamed(AppRoutes.addTask, arguments: task),
           onDelete: () => _deleteTask(context, task),
